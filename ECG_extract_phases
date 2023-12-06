@@ -15,6 +15,10 @@ from scipy.interpolate import interp1d
 from scipy.signal import hilbert
 from scipy import signal
 
+#%% Inizializzazione variabile
+#RR_series = dict{}
+
+
 #%% Import data
 #cwd = os.getcwd()
 #os.path.join(cwd, "Desktop\\PACman-main\\ecg-20231205T111854Z-001\\ecg")
@@ -22,11 +26,12 @@ datapath = "C:\\Users\\Utente\\Desktop\\PACman-main\\ecg-20231205T111854Z-001\\e
 samples = os.listdir(datapath)
 sub_one_path = os.path.join(datapath, samples[2])  #Import .set data
 
-signal_length = 180*256 # [n° of sample]
+sig_start = 3382*256  # [n° of sample]
+sig_end = (3382+50)*256  # [n° of sample]
 
 sample = mne.io.read_raw_eeglab(sub_one_path) #Import EEGlab
 sample1 = sample[0][0]
-sample1 = sample1[0][0:signal_length]
+sample1 = sample1[0][sig_start:sig_end]
 sr = sample.info["sfreq"]
 
 #%% cleaning
@@ -48,10 +53,10 @@ rr_resample = interpolation_function(new_time) #interpolation of RR serie
 fig,  axs = plt.subplots(2)
 axs[0].plot(peaks_ts, differences,'o')
 axs[0].set_title("Original signal")
-plt.xlabel("Time (s)")
+axs[0].set_xlabel("Time (s)")
 axs[1].plot(new_time, rr_resample, 'o')
 axs[1].set_title("Resampled signal")
-plt.xlabel("Time (s)")
+axs[1].set_xlabel("Time (s)")
 
 
 hr_rate = prepro_sample['ECG_Rate'] #extraction of heart rate
@@ -80,7 +85,7 @@ RR_filt = nk.signal_filter(rr_resample,
                           highcut=hc, 
                           method ='butterworth', 
                           order=2,
-                          show=True
+                          show=False
                           )
 
 #%% hilbert on RR
@@ -102,8 +107,8 @@ fig.tight_layout()
 
 # Select foi and number of cycles per frequency
 freqs = np.arange(lc, hc, 0.02)
-n_cycles =  sr / 2
-
+#n_cycles =  sr / 2
+n_cycles=  np.linspace(2, 10, num= len(freqs))
 # compute wavelets 
 Ws = mne.time_frequency.morlet(sr, freqs, n_cycles=n_cycles, sigma=None, zero_mean=True)
 
@@ -111,32 +116,33 @@ X = RR_filt #Select RR_filt, hr_rate, hr_rate_avg
 X = np.reshape(X, (1,X.shape[0]))
 # Compute tfr 
 tfr = mne.time_frequency.tfr.cwt(X, Ws, use_fft=True, mode='same', decim=1)
-tfr= np.reshape(tfr, (tfr.shape[1], tfr.shape[2]))
+#tfr= np.reshape(tfr, (tfr.shape[1], tfr.shape[2]))
 phase = np.squeeze(np.angle(tfr))
 
 # Create a figure
 fig, axs = plt.subplots(3)
-
+a = np.reshape(tfr, (tfr.shape[1], tfr.shape[2]));
 # First subplot
 axs[0].plot( new_time[:], RR_filt[:])
 axs[0].set_title("Signal")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
+axs[0].set_xlabel("Time (s)")
+axs[0].set_ylabel("Amplitude")
 
 # Second subplot
-axs[1].pcolormesh( new_time[:], freqs, np.abs(tfr[:,:]))
+pcm = axs[1].pcolormesh( new_time[:], freqs, np.abs(a[:,:]))
 axs[1].set_title("Scalogram")
 plt.axis('tight')
-plt.xlabel("Time (s)")
-plt.ylabel("Frequency (Hz)")
+axs[1].set_xlabel("Time (s)")
+axs[1].set_ylabel("Frequency (Hz)")
+plt.colorbar(pcm) 
 #plt.yscale("log")
 
 # Third subplot
-axs[2].plot(new_time[:], phase[5,:])
+axs[2].plot(new_time[:], phase[1,:])
 plt.axis('tight')
 axs[2].set_title("Phase")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
+axs[2].set_xlabel("Time (s)")
+
 
 # Adjust layout to prevent clipping of titles and labels
 plt.tight_layout()
