@@ -39,7 +39,7 @@ for idx, peak in enumerate(rr_intervals):
     if peak == 1:
         peaks_ts.append(idx/sr)
 differences = np.diff(peaks_ts) # RR series
-
+# [https://doi.org/10.1016/j.nlm.2018.12.008] reference for the resampling
 peaks_ts = peaks_ts[:-1] #removal of last time-values since each RR value is a difference between two peaks
 interpolation_function = interp1d(peaks_ts, differences, kind='cubic', fill_value='extrapolate')#cubic interpolation
 new_time = np.arange(peaks_ts[0], peaks_ts[-1], 1.0 / sr) #time-vector
